@@ -1,3 +1,4 @@
+#include "Types.hpp"
 #include "Graph.hpp"
 #include "Solver.hpp"
 #include "Agent.hpp"
@@ -7,10 +8,12 @@
 
 int main() {
 
-    Graph graph;
-    double day_cost = 0.0;
+    OldMap::Graph graph;
+    OldMap::Currency day_cost = 0.0;
     std::string entrance_name;
     std::string token;
+
+
 
     // Парсим карту
     while (std::cin >> token) {
@@ -22,12 +25,12 @@ int main() {
             std::cin >> entrance_name;
         } else if (token == "vertex") {
             std::string name;
-            double profit;
+            OldMap::Currency profit;
             std::cin >> name >> profit;
             graph.addNode(name, profit);
         } else if (token == "edge") {
             std::string name, u_name, v_name;
-            double prob;
+            OldMap::Probability prob;
             std::cin >> name >> u_name >> v_name >> prob;
             graph.addEdge(name, u_name, v_name, prob);
         } else if (token == "END") {
@@ -39,10 +42,10 @@ int main() {
         return 1;
     }
 
-    NodeId start_node = graph.getNodeId(entrance_name);
+    OldMap::NodeId start_node = graph.getNodeId(entrance_name);
     
-    Solver solver(day_cost);
-    Agent agent(graph, solver, start_node);
+    OldMap::Solver solver(day_cost);
+    OldMap::Agent agent(graph, solver, start_node);
     
     agent.run();
 

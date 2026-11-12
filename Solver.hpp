@@ -5,12 +5,13 @@
 #include <optional>
 #include <vector>
 #include <queue>
-#include <cmath>
-#include <algorithm>
+#include <limits>
+
+namespace OldMap {
 
 class Solver {
 public:
-    explicit Solver(double day_cost) : day_cost_(day_cost) {}
+    explicit Solver(Currency day_cost) : day_cost_(day_cost) {}
 
     // Возвращает ID закрытого (BROKEN) ребра, которое выгоднее всего расчистить.
     // Если выгодных путей больше нет, возвращает std::nullopt.
@@ -21,11 +22,11 @@ public:
         // ====================================================================
         // ШАГ 1: Строим дерево кратчайших путей (минимизируем число CLEAR)
         // ====================================================================
-        std::vector<double> dist(n, 1e9); // 1e9 выступает в роли бесконечности
+        std::vector<Currency> dist(n, std::numeric_limits<Currency>::infinity());
         std::vector<EdgeId> parent_edge(n, INVALID_EDGE_ID);
         
         // Min-Heap для Дейкстры. Хранит пары {расстояние, ID вершины}
-        using State = std::pair<double, NodeId>;
+        using State = std::pair<Currency, NodeId>;
         std::priority_queue<State, std::vector<State>, std::greater<State>> pq;
 
         dist[root] = 0.0;
@@ -42,7 +43,7 @@ public:
                 NodeId v = (edge.u == u) ? edge.v : edge.u;
 
                 // Оцениваем "стоимость" прохода в виде ожидаемого числа CLEAR
-                double weight = 0.0;
+                Currency weight = 0.0;
                 if (edge.state == EdgeState::OPEN) {
                     weight = 0.0;
                 } else if (edge.state == EdgeState::BROKEN) {
@@ -70,8 +71,7 @@ public:
         
         for (NodeId v = 0; v < static_cast<NodeId>(n); ++v) {
             if (v != root && parent_edge[v] != INVALID_EDGE_ID) {
-                const Edge& e = graph.getEdge(parent_edge[v]);
-                NodeId u = (e.u == v) ? e.v : e.u; // Находим родителя
+                NodeId u = graph.getOppositeNode(parent_edge[v], v); // Находим родителя
                 tree_children[u].push_back({v, parent_edge[v]});
             }
         }
@@ -100,7 +100,7 @@ public:
         // ====================================================================
         // ШАГ 4: Динамическое программирование (оценка ожидаемого профита)
         // ====================================================================
-        std::vector<double> dp(n, 0.0);
+        std::vector<Currency> dp(n, 0.0);
         
         for (NodeId u : topo) {
             const Node& node = graph.getNode(u);
@@ -112,7 +112,7 @@ public:
                 NodeId v = child.node;
                 const Edge& e = graph.getEdge(child.edge);
                 
-                double child_val = dp[v];
+                Currency child_val = dp[v];
                 
                 // Если поддерево в принципе не сулит выгоды, мы туда просто не пойдем
                 if (child_val <= 0.0) continue;
@@ -129,7 +129,7 @@ public:
                     // Мы не знаем состояние. 
                     // Если он цел (prob), мы получаем child_val.
                     // Если он сломан (1 - prob), мы решаем, окупается ли расчистка.
-                    double expected = e.probability * child_val + 
+                    Currency expected = e.probability * child_val + 
                                       (1.0 - e.probability) * std::max(0.0, child_val - day_cost_);
                     dp[u] += expected;
                 }
@@ -140,7 +140,7 @@ public:
         // ШАГ 5: Выбор лучшего ЗАВАЛЕННОГО ребра для расчистки
         // ====================================================================
         EdgeId best_edge = INVALID_EDGE_ID;
-        double max_expected_profit = 0.0; // Ищем строго позитивный профит
+        Currency max_expected_profit = 0.0; // Ищем строго позитивный профит
 
         // Проходим по всем вершинам, чье родительское ребро сейчас сломано (BROKEN)
         for (NodeId v = 0; v < static_cast<NodeId>(n); ++v) {
@@ -150,7 +150,7 @@ public:
                 
                 if (e.state == EdgeState::BROKEN) {
                     // Ожидаемый профит от расчистки этого конкретного ребра
-                    double expected_profit = dp[v] - day_cost_;
+                    Currency expected_profit = dp[v] - day_cost_;
                     
                     if (expected_profit > max_expected_profit) {
                         max_expected_profit = expected_profit;
@@ -164,10 +164,12 @@ public:
             return best_edge;
         }
         
-        // Математика показала, что профитных целей для расчистки больше нет
+        // Ожидается, что профитных целей для расчистки больше нет
         return std::nullopt;
     }
 
 private:
-    double day_cost_;
+    Currency day_cost_;
 };
+
+}

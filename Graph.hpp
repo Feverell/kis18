@@ -7,12 +7,14 @@
 #include <unordered_map>
 #include <stdexcept>
 
+namespace OldMap {
+
 class Graph {
 public:
     Graph() = default;
 
     // Добавление вершины. Если вершина уже есть, просто возвращаем ее ID
-    NodeId addNode(const std::string& name, double profit) {
+    NodeId addNode(const std::string& name, Currency profit) {
         if (auto it = node_name_to_id_.find(name); it != node_name_to_id_.end()) {
             return it->second;
         }
@@ -26,7 +28,7 @@ public:
     }
 
     // Добавление двустороннего ребра
-    EdgeId addEdge(const std::string& name, const std::string& u_name, const std::string& v_name, double probability) {
+    EdgeId addEdge(const std::string& name, const std::string& u_name, const std::string& v_name, Probability probability) {
         NodeId u = getNodeId(u_name);
         NodeId v = getNodeId(v_name);
         
@@ -91,3 +93,5 @@ private:
     std::vector<std::string> node_names_;
     std::vector<std::string> edge_names_;
 };
+
+}

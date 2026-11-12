@@ -1,7 +1,11 @@
 #pragma once
 
+namespace OldMap {
+
 using NodeId = int;
 using EdgeId = int;
+using Currency = double;
+using Probability = double;
 
 constexpr NodeId INVALID_NODE_ID = -1;
 constexpr EdgeId INVALID_EDGE_ID = -1;
@@ -16,12 +20,14 @@ struct Edge {
     EdgeId id;
     NodeId u;
     NodeId v;
-    double probability;
+    Probability probability;
     EdgeState state;
 };
 
 struct Node {
     NodeId id;
-    double profit;
+    Currency profit;
     bool is_visited;
 };
+
+}

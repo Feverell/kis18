@@ -9,6 +9,8 @@
 #include <queue>
 #include <optional>
 
+namespace OldMap {
+
 class Agent {
 public:
     Agent(Graph& graph, Solver solver, NodeId entrance_node)
@@ -24,19 +26,22 @@ public:
             }
 
             // 2. Ищем ближайшую недоисследованную вершину, доступную по открытым (OPEN) путям
-            std::optional<EdgeId> next_edge = getNextEdgeToUnvisited();
+            const std::optional<std::vector<EdgeId>> path_to_unvisited = getPathToUnvisited();
 
-            if (next_edge.has_value()) {
+            if (path_to_unvisited.has_value()) {
                 // 3. Если путь есть, идем по нему
-                moveTo(next_edge.value());
+                const std::vector<EdgeId>& path = *path_to_unvisited;
+                for (auto it = path.rbegin(); it != path.rend(); ++it) {
+                    moveTo(*it);
+                }
             } else {
-                // 4. Если свободных путей нет, время звать математику на помощь
+                // 4. Если свободных путей нет, вызываем solver
                 std::optional<EdgeId> best_edge_to_clear = solver_.getBestEdgeToClear(graph_, entrance_node_);
 
                 if (best_edge_to_clear.has_value()) {
                     clearEdge(best_edge_to_clear.value());
                 } else {
-                    // Математика сказала, что больше выгоды не извлечь
+                    // solver решил, что больше выгоды не извлечь
                     endExpedition();
                     break;
                 }
@@ -107,7 +112,7 @@ private:
     // --- Блок навигации ---
 
     // BFS поиск кратчайшего пути по гарантированно свободным (OPEN) ходам до ближайшей неисследованной вершины
-    std::optional<EdgeId> getNextEdgeToUnvisited() {
+    std::optional<std::vector<EdgeId>> getPathToUnvisited() {
         size_t n = graph_.nodesCount();
         std::vector<bool> visited_bfs(n, false);
         std::vector<EdgeId> edge_to_reach(n, INVALID_EDGE_ID);
@@ -125,12 +130,6 @@ private:
             NodeId u = q.front();
             q.pop();
             
-            // Если нашли непосещенную вершину (мы в ней не делали LOOK)
-            if (!graph_.getNode(u).is_visited) {
-                target_node = u;
-                break; 
-            }
-            
             for (EdgeId edge_id : graph_.getIncidentEdges(u)) {
                 const Edge& edge = graph_.getEdge(edge_id);
                 
@@ -138,13 +137,22 @@ private:
                 if (edge.state == EdgeState::OPEN) {
                     NodeId v = graph_.getOppositeNode(edge_id, u);
                     if (!visited_bfs[v]) {
-                        visited_bfs[v] = true;
                         edge_to_reach[v] = edge_id;
                         parent_node[v] = u;
+
+                        // Если нашли непосещенную вершину (мы в ней не делали LOOK)
+                        if (!graph_.getNode(v).is_visited) {
+                            target_node = v;
+                            break; 
+                        }
+
+                        visited_bfs[v] = true;
                         q.push(v);
                     }
                 }
             }
+
+            if (target_node != INVALID_NODE_ID) { break; }
         }
         
         // Если неисследованных достижимых вершин нет
@@ -152,15 +160,17 @@ private:
             return std::nullopt;
         }
         
-        // Раскручиваем путь с конца, чтобы понять, какой первый шаг нужно сделать из current_node_
+        // Раскручиваем путь с конца
         NodeId curr = target_node;
-        EdgeId first_edge = INVALID_EDGE_ID;
+        std::vector<EdgeId> path_to_unvisited;
         
         while (curr != current_node_) {
-            first_edge = edge_to_reach[curr];
+            path_to_unvisited.push_back(edge_to_reach[curr]);
             curr = parent_node[curr];
         }
         
-        return first_edge;
+        return path_to_unvisited;
     }
 };
+
+}
