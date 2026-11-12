@@ -79,6 +79,8 @@ private:
         
         std::string status;
         std::cin >> status;
+
+        current_node_ = graph_.getOppositeNode(edge_id, current_node_);
     }
 
     void clearEdge(EdgeId edge_id) {
